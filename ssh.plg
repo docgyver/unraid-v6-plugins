@@ -3,7 +3,7 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name       "ssh">
 <!ENTITY author     "docgyver">
-<!ENTITY version    "2018.01.18">
+<!ENTITY version    "2018.01.22">
 <!ENTITY category   "Network Services">
 <!ENTITY pluginURL  "https://raw.github.com/docgyver/unraid-v6-plugins/master/&name;.plg">
 <!ENTITY packageURL "https://github.com/docgyver/unraid-v6-plugins/releases/download/&name;">
@@ -77,16 +77,6 @@ if [ ! -f /boot/config/plugins/&name;/putty-0.64-$(/usr/bin/uname -m)-1rj.txz ];
   fi
 fi
 /sbin/upgradepkg --install-new /boot/config/plugins/&name;/putty-0.64-$(/usr/bin/uname -m)-1rj.txz
-</INLINE>
-</FILE>
-
-<!-- POST-INSTALL SCRIPT -->
-<FILE Run="/bin/bash">
-<INLINE>
-# Update folder permissions
-chmod 755 /usr/local/emhttp/plugins/&name;
-chmod 755 /usr/local/emhttp/plugins/&name;/icons
-chmod 755 /usr/local/emhttp/plugins/&name;/scripts
 </INLINE>
 </FILE>
 
@@ -671,6 +661,16 @@ if [ "&devplugin;" == "true" ]; then
 fi
 
 rm /tmp/plugin-development
+</INLINE>
+</FILE>
+
+<!-- POST-INSTALL SCRIPT -->
+<FILE Run="/bin/bash">
+<INLINE>
+# Update folder permissions
+chmod 755 /usr/local/emhttp/plugins/&name;
+chmod 755 /usr/local/emhttp/plugins/&name;/icons
+chmod 755 /usr/local/emhttp/plugins/&name;/scripts
 </INLINE>
 </FILE>
 
