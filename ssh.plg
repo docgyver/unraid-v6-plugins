@@ -3,7 +3,7 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name       "ssh">
 <!ENTITY author     "docgyver">
-<!ENTITY version    "2018.01.22">
+<!ENTITY version    "2019.11.10">
 <!ENTITY category   "Network Services">
 <!ENTITY pluginURL  "https://raw.github.com/docgyver/unraid-v6-plugins/master/&name;.plg">
 <!ENTITY packageURL "https://github.com/docgyver/unraid-v6-plugins/releases/download/&name;">
@@ -15,6 +15,13 @@
          version="&version;"
          category="&category;"
          pluginURL="&pluginURL;">
+	
+<CHANGES>
+###2019.11.10###
+- Changed rc.ssh:write_config() to read values from /etc/ssh/sshd_config before updating /boot/config/plugins/ssh.cfg
+- Changed default value of PermitRootLogin to "yes" in case it is not set by write_config
+
+</CHANGES>
 
 <!--
 Copyright 2014, Rich Manton (overbyrn)
@@ -51,7 +58,7 @@ Plugin file locations:
 SERVICE="enable"
 PORT="22"
 USERLIST="-1"
-PERMITROOTLOGIN="no"
+PERMITROOTLOGIN="yes"
 MAXAUTHTRIES="6"
 PASSWORDAUTHENTICATION="yes"
 PERMITEMPTYPASSWORDS="no"
@@ -477,6 +484,13 @@ write_config()
   echo "Updating Config..."
   sleep 1
   
+  read fill PORT < <(egrep "Port " /etc/ssh/sshd_config)
+  read fill PERMITROOTLOGIN < <(egrep PermitRootLogin /etc/ssh/sshd_config)
+  read fill MAXAUTHTRIES < <(egrep MaxAuthTries /etc/ssh/sshd_config)
+  read fill PASSWORDAUTHENTICATION < <(egrep PasswordAuthentication /etc/ssh/sshd_config)
+  read fill PERMITEMPTYPASSWORDS < <(egrep PermitEmptyPasswords /etc/ssh/sshd_config)
+  read fill GATEWAYPORTS < <(egrep GatewayPorts /etc/ssh/sshd_config)
+
   echo "# ssh configuration" > /boot/config/plugins/ssh/ssh.cfg
   echo "SERVICE=\"$SERVICE\"" >> /boot/config/plugins/ssh/ssh.cfg
   echo "PORT=\"$PORT\"" >> /boot/config/plugins/ssh/ssh.cfg
