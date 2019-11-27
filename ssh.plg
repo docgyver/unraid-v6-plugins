@@ -3,7 +3,7 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name       "ssh">
 <!ENTITY author     "docgyver">
-<!ENTITY version    "2019.11.10">
+<!ENTITY version    "2019.11.26">
 <!ENTITY category   "Network Services">
 <!ENTITY pluginURL  "https://raw.github.com/docgyver/unraid-v6-plugins/master/&name;.plg">
 <!ENTITY packageURL "https://github.com/docgyver/unraid-v6-plugins/releases/download/&name;">
@@ -17,6 +17,11 @@
          pluginURL="&pluginURL;">
 	
 <CHANGES>
+###2019.11.26###
+- BugFix: Fixed Display of Online Version in the UI
+- BugFix: Move ssh.cfg initialization to buttonstart() from write_config(). Was causing UI changes to be ignored.
+- Remove ssh.cfg creation from Plugin package. The buttonstart() function now does this.
+- BugFix: Only update sshd_config on lines with Keyword at the begining of the line. (Ignore in Block comments)
 ###2019.11.10###
 - Changed rc.ssh:write_config() to read values from /etc/ssh/sshd_config before updating /boot/config/plugins/ssh.cfg
 - Changed default value of PermitRootLogin to "yes" in case it is not set by write_config
@@ -51,19 +56,6 @@ Plugin file locations:
 
 <FILE Name="/boot/config/plugins/&name;/read_me.txt">
 <URL>&packageURL;/read_me.txt</URL>
-</FILE>
-
-<FILE Name="/boot/config/plugins/&name;/&name;.cfg">
-<INLINE>
-SERVICE="enable"
-PORT="22"
-USERLIST="-1"
-PERMITROOTLOGIN="yes"
-MAXAUTHTRIES="6"
-PASSWORDAUTHENTICATION="yes"
-PERMITEMPTYPASSWORDS="no"
-GATEWAYPORTS="no"
-</INLINE>
 </FILE>
 
 <FILE Run="/bin/bash" Method="install">
@@ -150,7 +142,7 @@ $ssh_running = file_exists( "/var/run/sshd.pid") ? "yes" : "no";
 $ssh_localplg = shell_exec('grep "<\!ENTITY version" /boot/config/plugins/ssh.plg | cut -d\" -f2');
 
 //Get remote plugin file version.  Uses Limetech plugin php to perform this function
-$ssh_remoteplg = shell_exec("/usr/local/sbin/plugin check ssh.plg");
+$ssh_remoteplg = shell_exec("/usr/local/sbin/plugin check ssh.plg | tail -1");
 
 //create array of users from passwd file where their UID is greater than or equal to 1000.  ie. assumed to be non-system users
 $useropts = array();
@@ -408,6 +400,11 @@ checkRUNNING(document.ssh_settings);
 #!/bin/bash
 # start|stop|restart|enable|disable|buttonstart ssh.
 
+CONFIG="/boot/config/plugins/ssh/ssh.cfg"
+
+# read our configuration
+source $CONFIG
+
 ssh_start()
 {
   # no-op if not enabled
@@ -467,16 +464,18 @@ ssh_restart() {
 
 ssh_buttonstart()
 {
-  CONFIG="/boot/config/plugins/ssh/ssh.cfg"
-  if [ -f $CONFIG ]; then
-    # a less greedy sed.  only replaces the first occurance of disabled with enabled.  ie. will only hit service line which is (usually) always first in cfg
-	sed -i "0,/"disable"/s/"disable"/"enable/"" $CONFIG 2>/dev/null
-    SERVICE=enable
-    
-    write_config
-    ssh_start
-    
-  fi
+  SERVICE=enable
+
+  read fill PORT < <(egrep "#?Port " /etc/ssh/sshd_config)
+  read fill PERMITROOTLOGIN < <(egrep "#?PermitRootLogin " /etc/ssh/sshd_config)
+  read fill MAXAUTHTRIES < <(egrep "#?MaxAuthTries " /etc/ssh/sshd_config)
+  read fill PASSWORDAUTHENTICATION < <(egrep "#?PasswordAuthentication " /etc/ssh/sshd_config)
+  read fill PERMITEMPTYPASSWORDS < <(egrep "#?PermitEmptyPasswords " /etc/ssh/sshd_config)
+  read fill GATEWAYPORTS < <(egrep "#?GatewayPorts " /etc/ssh/sshd_config)
+
+  write_config
+  ssh_start
+
 }
 
 write_config()
@@ -484,13 +483,6 @@ write_config()
   echo "Updating Config..."
   sleep 1
   
-  read fill PORT < <(egrep "Port " /etc/ssh/sshd_config)
-  read fill PERMITROOTLOGIN < <(egrep PermitRootLogin /etc/ssh/sshd_config)
-  read fill MAXAUTHTRIES < <(egrep MaxAuthTries /etc/ssh/sshd_config)
-  read fill PASSWORDAUTHENTICATION < <(egrep PasswordAuthentication /etc/ssh/sshd_config)
-  read fill PERMITEMPTYPASSWORDS < <(egrep PermitEmptyPasswords /etc/ssh/sshd_config)
-  read fill GATEWAYPORTS < <(egrep GatewayPorts /etc/ssh/sshd_config)
-
   echo "# ssh configuration" > /boot/config/plugins/ssh/ssh.cfg
   echo "SERVICE=\"$SERVICE\"" >> /boot/config/plugins/ssh/ssh.cfg
   echo "PORT=\"$PORT\"" >> /boot/config/plugins/ssh/ssh.cfg
@@ -567,12 +559,13 @@ write_config()
   #cp --preserve=timestamps -p -f /boot/config/plugins/ssh/ssh_config /etc/ssh/ssh_config
   
   # update sshd_config file with values set in webgui
-  sed -i 's/.*Port .*/Port '$PORT'/' /etc/ssh/sshd_config
-  sed -i 's/.*PermitRootLogin.*/PermitRootLogin '$PERMITROOTLOGIN'/' /etc/ssh/sshd_config
-  sed -i 's/.*MaxAuthTries.*/MaxAuthTries '$MAXAUTHTRIES'/' /etc/ssh/sshd_config
-  sed -i 's/.*PasswordAuthentication.*/PasswordAuthentication '$PASSWORDAUTHENTICATION'/' /etc/ssh/sshd_config
-  sed -i 's/.*PermitEmptyPasswords.*/PermitEmptyPasswords '$PERMITEMPTYPASSWORDS'/' /etc/ssh/sshd_config
-  sed -i 's/.*GatewayPorts.*/GatewayPorts '$GATEWAYPORTS'/' /etc/ssh/sshd_config
+  # only update when the Keyword is find at the beginning of the line (^#\?)
+  sed -i 's/^#\?Port .*/Port '$PORT'/' /etc/ssh/sshd_config
+  sed -i 's/^#\?PermitRootLogin .*/PermitRootLogin '$PERMITROOTLOGIN'/' /etc/ssh/sshd_config
+  sed -i 's/^#\?MaxAuthTries .*/MaxAuthTries '$MAXAUTHTRIES'/' /etc/ssh/sshd_config
+  sed -i 's/^#\?PasswordAuthentication .*/PasswordAuthentication '$PASSWORDAUTHENTICATION'/' /etc/ssh/sshd_config
+  sed -i 's/^#\?PermitEmptyPasswords .*/PermitEmptyPasswords '$PERMITEMPTYPASSWORDS'/' /etc/ssh/sshd_config
+  sed -i 's/^#\?GatewayPorts .*/GatewayPorts '$GATEWAYPORTS'/' /etc/ssh/sshd_config
 
   # preserve live /etc/sshd_config file on flash. When unRAID reboots, the standard ssh startup baked into unRAID v6 will
   # copy all files from /boot/config/ssh to /etc/ssh. This ensures the correct config is maintained after a reboot. Failure
@@ -625,9 +618,6 @@ ssh_disable()
   echo "... OK"
   sleep 1
 }
-
-# read our configuration
-source /boot/config/plugins/ssh/ssh.cfg
 
 case "$1" in
   'start')
