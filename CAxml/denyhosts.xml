@@ -4,7 +4,7 @@
 <PluginURL>https://raw.githubusercontent.com/docgyver/unraid-v6-plugins/master/denyhosts.plg</PluginURL>
 <PluginAuthor>DocGyver</PluginAuthor>
 <Beta>False</Beta>
-<Category>Network:Other</Category>
+<Category>Network:Other Security:</Category>
 <Name>denyhosts ssh log monitor</Name>
 <Description>
 Analyzes the sshd server log messages to determine what hosts are attempting to hack into your system.
