@@ -4,7 +4,7 @@
 <PluginURL>https://raw.githubusercontent.com/docgyver/unraid-v6-plugins/master/ssh.plg</PluginURL>
 <PluginAuthor>DocGyver</PluginAuthor>
 <Beta>False</Beta>
-<Category>Network:Other</Category>
+<Category>Network:Other Security:</Category>
 <Name>SSH Config Tool</Name>
 <Description>
 Use this plugin to change primary SSH configuration settings and enable Public Key authentication on a per user basis. It also gives the ability to stop/start and enable/disable the service.
